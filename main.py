@@ -6,12 +6,23 @@ templates = {
         'description': 'Описание ПВК для Депозитария'
     },
     'ПВК для ИП': {
-        'template': 'ИП: Настоящие Правила внутреннего контроля в целях противодействия легализации (отмыванию) доходов, полученных преступным путем, и финансированию терроризма {client} устанавливаются в соответствии с положениями',
+        'template': './Data/Templates/ПВК для ИП.docx',
         'parameters': {
             'client': 'наименование ИП'},
         'description': 'Описание ПВК для ИП'
     }}
-template_dict = templates['ПВК']
+for template_key in templates:
+    print("название шаблона: " + template_key)
+    templates [template_key]
+    print(templates[template_key] ["description"] +
+          "\n")
+while True:
+    template_name = input("введите наименование шаблона ПВК; ")
+    if template_name in templates:
+        break
+    else:
+        print("выберите верное название шаблона: ", templates.keys())
+template_dict = templates[template_name]
 
 template_path = template_dict['template']
 # with open(template_path, 'r', encoding='utf-8') as template_file:
