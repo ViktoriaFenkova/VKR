@@ -13,7 +13,7 @@ def read_text(template_path):
     return template
 
 
-def выбор_шаблона(templates):
+def  /выбор_шаблона(templates):
     for template_key in templates:
         print("название шаблона: " + template_key)
         templates[template_key]

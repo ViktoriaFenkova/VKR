@@ -1,5 +1,8 @@
 from Functions import выбор_шаблона, заполнение_шаблона
 import json
+import streamlit as st
+st.hedder("Test")
+
 
 """
 templates = {
