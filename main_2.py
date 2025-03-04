@@ -5,17 +5,19 @@ st.header("Конструктор ПВК") #отвечает на страниц
 
 
 переменная = """
-templates = {
-    'ПВК': {
-        'template': "./Data/Templates/PVK Template.docx",
+templates = { 
+    'ПВК': { - словарь (с 10 по 13 стр) ключ - название шаблона
+        'template': "./Data/Templates/PVK Template.docx", -  - параметр словаря "ПВК" , путь к файлу шаблона
         'parameters': {
-            'client': 'наименование компании'},
+            'client': 'наименование компании'
+            },
         'description': 'Описание ПВК для Депозитария'
     },
     'ПВК для ИП': {
         'template': './Data/Templates/ПВК для ИП.docx',
         'parameters': {
-            'client': 'наименование ИП'},
+            'client': 'наименование ИП'
+            },
         'description': 'Описание ПВК для ИП'
     }}
 """
@@ -29,7 +31,7 @@ with open("./Data/формы_шаблонов.json", "r") as templates_file: #wi
 template_name = выбор_шаблона_streamlit(templates) #вызов функции с параметрами tempiates  и после этого функция возращает результат и он записывается в перемменную template_name
 
 template_dict = templates[template_name] # template -это словарь, ключи в этом словаре - наименования шаблонов, template_name-наименование конкретного шаблона, выбранного пользователем
-template_path = template_dict['template'] #относится к заполнению шаблона
+template_path = template_dict['template'] # в template_path записывается 'template': './Data/Templates/ПВК для ИП.docx',
 # with open(template_path, 'r', encoding='utf-8') as template_file:
 # template = template_file.read()
 

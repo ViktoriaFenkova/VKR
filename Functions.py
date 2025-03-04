@@ -44,10 +44,11 @@ def заполнение_шаблона(template_dict, template_path):
 def заполнение_шаблона_streamlit(template_dict, template_path):
     parameters = template_dict['parameters']
     user_inputs = {}
-    for parameters_name in parameters:  # for parameter_name in parameters.keys():(второй вариант)
-        user_inputs[parameters_name] = st.text_input(parameters[parameters_name] + ": ")
-    template = read_text(template_path)
-    template.format(**user_inputs)
-    st.write(template.format(**user_inputs))
+    for parameters_name in parameters:  # for parameter_name in parameters.keys():(второй вариант); parameters_name = client
+        user_inputs[parameters_name] = st.text_input(parameters[parameters_name] + ": ") # (parameters[parameters_name]) = наименование ИП
+    template = read_text(template_path)# template_path-путь до шаблона
+    template.format(**user_inputs)# функция подставления параметров в строку (функция ожидает получить содержимое объекта словаря); ** - распаковка словаря (тк функция не ожидает получить словарь в качестве параметра)
+    st.write(template.format(**user_inputs))# st.write - функция показывает пользователю в интерфейсе результат
     #print(template.format(**user_inputs)) #вывод в терминал
+    p = template.format(**user_inputs)
 
