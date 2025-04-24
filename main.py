@@ -74,13 +74,7 @@ elif choice == "🌐 Новости ПОД/ФТ":
 
 
 
-# Конструктор ПВК
-elif choice == "📝 Конструктор ПВК":
-    st.subheader("_")
-    st.write("""
-    Проект предназначен для демонстрации возможностей Streamlit.\n
-    Автор: Ваша фамилия\n
-    Дата публикации: Сегодняшний день""")
+
 
 # Примечания по оформлению
     st.markdown("<br><center>Copyright © 2023 Все права защищены.</center>", unsafe_allow_html=True)
@@ -262,6 +256,23 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
     elif st.session_state.page== "admin_page":
         st.subheader("Страница админа")
         st.info("Страничка на ремонте")
+        template_name = st.text_input("Название шаблона")
+        template_description = st.text_area("Описание шаблона")
+
+        # Загрузка шаблона
+        uploaded_file = st.file_uploader("Загрузите .docx шаблон", type=["docx"])
+
+        st.markdown("### Параметры шаблона")
+        # Указание количества параметров
+        num_params = st.number_input("Количество параметров", min_value=0, max_value=20, step=1)
+
+        parameters = {}
+        st.markdown("### Параметры шаблона")
+        for i in range(num_params):
+            key = st.text_input(f"Ключ параметра #{i + 1}", key=f"param_key_{i}")
+            description = st.text_input(f"Описание параметра #{i + 1}", key=f"param_desc_{i}")
+            if key:
+                parameters[key] = description
 
 d = '''import streamlit as st
 from pptx import Presentation
