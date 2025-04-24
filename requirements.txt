@@ -1,2 +1,5 @@
 python-docx
 streamlit
+python-pptx
+matplotlib
+seaborn

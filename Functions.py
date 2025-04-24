@@ -51,4 +51,5 @@ def заполнение_шаблона_streamlit(template_dict, template_path):
     st.write(template.format(**user_inputs))# st.write - функция показывает пользователю в интерфейсе результат
     #print(template.format(**user_inputs)) #вывод в терминал
     p = template.format(**user_inputs)
+    return p
 
