@@ -14,25 +14,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-a = '''
-
 # Логотип и заголовок
 logo_url = "https://cdn-icons-png.flaticon.com/512/3243/3243363.png"#как заменить изображение
 st.image(logo_url, width=100)
-st.title("📃 Конструктор ПВК")
 
-# Роль
-with st.sidebar:
-    selected_section = st.radio("Управление пользовательскими ролями:", ["Пользователь (User)", "Администратор (Admin)"], index=0)
 
-# Навигации слева
-menu = ["📎 Главная", "📝 Конструктор ПВК", "🌐 Новости ПОД/ФТ", "📚 Обучение по ПОД/ФТ"]
-choice = st.sidebar.selectbox("Навигация", menu)
 
-# Содержимое главной страницы
-if choice == "📎 Главная":
-    st.subheader("Разработайте оптимальные правила внутреннего контроля для вашей компании легко и быстро")
-    st.info("Здесь можно познакомиться с возможностями платформы.")
+a = '''
+
+
+
+
+
 
 # Новости ПОД/ФТ
 elif choice == "🌐 Новости ПОД/ФТ":
@@ -151,26 +144,32 @@ if generate_button:
     except Exception as e:
         st.error(f"Произошла ошибка: {e}")'''
 
+# Страница по умолчанию
+if "page" not in st.session_state: #st.session_state - хранилище всех переменных, которые мы туда положили и они должны сохраняться при взаимодействии со страницей (пример - st.session_state.regime)
+    st.session_state.page = "page_main" # это если пользователь не нажал вообще никакую кнопку, по умолчанию пользователь видит Главную страницу
+
+# Содержимое главной страницы
+page_main = st.sidebar.button("📎 Главная")
+if page_main == True:
+    st.session_state.page = "page_main"
 
 
 
-
-
-
-user_regime = st.sidebar.button("Режим заполнения шаблона")
+user_regime = st.sidebar.button("📝 Конструктор ПВК")
 print(user_regime)
 if user_regime == True: # можно просто if e (результат нажатия кнопки):
-    st.session_state.regime = "user_regime" # при каждом нажатии на кнопку перезаписывается
-if "regime" not in st.session_state: #st.session_state - хранилище всех переменных, которые мы туда положили и они должны сохраняться при взаимодействии со страницей (пример - st.session_state.regime)
-    st.session_state.regime = "user_regime" # это если пользователь не нажал вообще никакую кнопку
-print(st.session_state.regime)
+    st.session_state.page = "page_PVK" # при каждом нажатии на кнопку перезаписывается, page_PVK - страница с конструктором ПВК
 
-admin_regime = st.sidebar.button("Режим редактирования шаблона")
-print(admin_regime)
-if admin_regime == True: # можно просто if e (результат нажатия кнопки):
-    st.session_state.regime = "admin_regime" # при каждом нажатии на кнопку перезаписывается
+print(st.session_state.page)
 
+admin_page = st.sidebar.button("📌 Редактор Шаблонов")
+print(admin_page)
+if admin_page == True: # можно просто if e (результат нажатия кнопки):
+    st.session_state.page = "admin_page" # при каждом нажатии на кнопку перезаписывается
 
+# Навигации слева
+#menu = ["📎 Главная", "📝 Конструктор ПВК", "🌐 Новости ПОД/ФТ", "📚 Обучение по ПОД/ФТ"]
+#choice = st.sidebar.selectbox("Навигация", menu)
 
 переменная = """
 templates = { 
@@ -217,7 +216,8 @@ def login_user(username, password):
     else:
         st.error("Неверное имя пользователя или пароль.")
 
-if not (st.session_state.username in st.session_state.users_db and st.session_state.users_db[st.session_state.username] ["password"] == st.session_state.password):
+if (not (st.session_state.username in st.session_state.users_db and st.session_state.users_db[st.session_state.username] ["password"] == st.session_state.password) and
+    st.session_state.page != "page_main"):
     st.title("Форма регистрации и входа") # Заголовок формы регистрации и входа
 
     option = st.selectbox("Выберите действие", ["Регистрация", "Вход"])
@@ -241,8 +241,11 @@ if not (st.session_state.username in st.session_state.users_db and st.session_st
 print(st.session_state.username)
 print(st.session_state.users_db)
 #st.session_state - хранение переменных в рамках одной сессии
+if st.session_state.page == "page_main":
+    st.subheader("Разработайте оптимальные правила внутреннего контроля для вашей компании легко и быстро")
+    st.info("Здесь можно познакомиться с возможностями платформы.")
 if st.session_state.username in st.session_state.users_db and st.session_state.users_db[st.session_state.username]["password"] == st.session_state.password:
-    if st.session_state.regime == "user_regime":
+    if st.session_state.page== "page_PVK":
         template_name = выбор_шаблона_streamlit(templates) #вызов функции с параметрами tempiates  и после этого функция возращает результат и он записывается в перемменную template_name
 
         template_dict = templates[template_name] # template -это словарь, ключи в этом словаре - наименования шаблонов, template_name-наименование конкретного шаблона, выбранного пользователем
@@ -256,7 +259,9 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
             шаблон_файл.write(заполненный_шаблон)# retern - только с не готовыми функциями
         with open("шаблон_клиента.docx", "r") as шаблон_файл:
             st.download_button("Скачать документ", шаблон_файл, file_name= template_name +".docx")
-
+    elif st.session_state.page== "admin_page":
+        st.subheader("Страница админа")
+        st.info("Страничка на ремонте")
 
 d = '''import streamlit as st
 from pptx import Presentation
