@@ -6,18 +6,47 @@ import json
 import streamlit as st
 import os
 
+import re
+from docx import Document
+
+
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from io import BytesIO
+
+from datetime import datetime
+
+import openai
+import os
+
+from PIL import Image
+
 # Конфигурация страницы
 st.set_page_config(
     page_title="ПВК",
-    page_icon="💻",
+    page_icon="🛠️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Логотип и заголовок
-logo_url = "https://cdn-icons-png.flaticon.com/512/3243/3243363.png"#как заменить изображение
-st.image(logo_url, width=100)
+logo = Image.open("logo.png")# добавляю логотип
 
+
+st.sidebar.image(logo, width=120)# добавляю логотип для отображения на каждой странице приложения
+st.sidebar.markdown("### ПВК-Конструктор")
+
+
+
+
+# Создаём 2 колонки
+col1, col2 = st.columns([1, 3])  # Изображение будет в первой колонке (меньше), текст — во второй
+
+with col1:
+    st.image(logo, width=400)  # Можно увеличить, если нужно
+
+with col2:
+    st.markdown("## Конструктор правил внутреннего контроля")
+    st.write("Здесь вы можете создавать и редактировать внутренние правила по ПОД/ФТ.")
 
 
 a = '''
@@ -81,10 +110,7 @@ elif choice == "🌐 Новости ПОД/ФТ":
 
 
 
-# Обучение по ПОД/ФТ
-elif choice == "📚 Обучение по ПОД/ФТ":
-    st.subheader("Обучение по ПОД/ФТ")
-    st.write("Здесь можно подготовить учебные материалы по вопросам противодействия легализации доходов, полученных преступным путем, и финансирования терроризма.")
+
     
 # Функция, создающая презентацию из введённого текста
 
@@ -190,10 +216,11 @@ with open("./Data/формы_шаблонов.json", "r") as templates_file: #wi
     templates = json.load(templates_file)
 
 if "users_db" not in st.session_state:
-    st.session_state.users_db = {} # Пустой словарь для хранения данных пользователей
+    st.session_state.users_db = {1:{"admin" : True, # любой пользователь - админ
+                                               "password": 1}} # Пустой словарь для хранения данных пользователей
 
-    st.session_state.username = None
-    st.session_state.password = None
+    st.session_state.username = 1
+    st.session_state.password = 1
 # Функция для регистрации пользователя
 def register_user(username, password):
     if username in st.session_state.users_db:
@@ -234,6 +261,24 @@ if (not (st.session_state.username in st.session_state.users_db and st.session_s
 
 print(st.session_state.username)
 print(st.session_state.users_db)
+
+
+# Функция для извлечения параметров из шаблона
+def extract_parameters_from_docx(docx_file):
+    # Загружаем документ
+    doc = Document(docx_file)
+
+    # Список для хранения параметров
+    parameters = set()
+
+    # Проходим по всем параграфам в документе
+    for para in doc.paragraphs:
+        # Используем регулярное выражение для поиска параметров в фигурных скобках
+        matches = re.findall(r'\{(.*?)\}', para.text)
+        parameters.update(matches)  # Добавляем найденные параметры в множество
+
+    return list(parameters)
+
 #st.session_state - хранение переменных в рамках одной сессии
 if st.session_state.page == "page_main":
     st.subheader("Разработайте оптимальные правила внутреннего контроля для вашей компании легко и быстро")
@@ -253,83 +298,275 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
             шаблон_файл.write(заполненный_шаблон)# retern - только с не готовыми функциями
         with open("шаблон_клиента.docx", "r") as шаблон_файл:
             st.download_button("Скачать документ", шаблон_файл, file_name= template_name +".docx")
-    elif st.session_state.page== "admin_page":
+            # Страница администратора
+    elif st.session_state.page == "admin_page":
         st.subheader("Страница админа")
-        st.info("Страничка на ремонте")
         template_name = st.text_input("Название шаблона")
         template_description = st.text_area("Описание шаблона")
 
         # Загрузка шаблона
         uploaded_file = st.file_uploader("Загрузите .docx шаблон", type=["docx"])
 
-        st.markdown("### Параметры шаблона")
-        # Указание количества параметров
-        num_params = st.number_input("Количество параметров", min_value=0, max_value=20, step=1)
+        if uploaded_file:
+            # Извлекаем параметры из загруженного шаблона
+            parameters = extract_parameters_from_docx(uploaded_file)
 
-        parameters = {}
-        st.markdown("### Параметры шаблона")
-        for i in range(num_params):
-            key = st.text_input(f"Ключ параметра #{i + 1}", key=f"param_key_{i}")
-            description = st.text_input(f"Описание параметра #{i + 1}", key=f"param_desc_{i}")
-            if key:
-                parameters[key] = description
+            if parameters:
+                st.markdown("### Параметры шаблона")
 
-d = '''import streamlit as st
-from pptx import Presentation
-from pptx.util import Inches
-from io import BytesIO
+                # Словарь для хранения описаний параметров
+                parameter_descriptions = {}
+
+                # Для каждого параметра запрашиваем описание
+                for param in parameters:
+                    description = st.text_input(f"Описание для параметра: {param}", key=f"param_desc_{param}")
+                    if description:
+                        parameter_descriptions[param] = description
+            else:
+                st.warning("В шаблоне не найдены параметры.")
+        # Кнопка сохранения шаблона
+        сохранение_шаблона = st.button("Сохранить шаблон")
+        if сохранение_шаблона == True:
+            if not template_name:
+                st.warning("Название шаблона не заполнено")
+                st.error("Шаблон не сохранен")
+            else:
+                st.success("Шаблон сохранен")
 
 
-# Функция, создающая презентацию из введённого текста
-def create_presentation(text):
-    # Создаем объект презентации
+# Обучение по ПОД/ФТ
+presentation_page = st.sidebar.button("📚 Обучение по ПОД/ФТ")
+if presentation_page == True:
+    st.session_state.page = "presentation_page"
+    st.write("Здесь вы можете создать презентацию для проведения обучения сотрудников")
+
+# Функция для создания презентации
+def create_presentation(slides_data):
     prs = Presentation()
 
-    # Используем первый шаблон слайда (заголовочный слайд)
-    title_slide_layout = prs.slide_layouts[0]
-    first_slide = prs.slides.add_slide(title_slide_layout)
-    title = first_slide.shapes.title
-    title.text = "Презентация от Streamlit"
+    for slide_data in slides_data:
+        slide = prs.slides.add_slide(prs.slide_layouts[1])  # 1 - титульный слайд (заголовок + подзаголовок)
 
-    # Остальные слайды будут содержать сам вводимый текст
-    lines = text.split("\n")  # разбиение текста на строки
-    content_slide_layout = prs.slide_layouts[1]
+        title = slide.shapes.title
+        subtitle = slide.placeholders[1]
 
-    for line in lines:
-        if len(line.strip()) > 0:
-            new_slide = prs.slides.add_slide(content_slide_layout)
-            left = top = width = height = Inches(1.0)
-            txBox = new_slide.shapes.add_textbox(left, top, width, height)
-            tf = txBox.text_frame
-            tf.text = line
+        title.text = slide_data['title']
+        subtitle.text = slide_data['subtitle']
 
-    # Возвращаем готовую презентацию
-    return prs
+        # Добавление текста на слайд
+        for i, text in enumerate(slide_data.get('text', [])):
+            left = Inches(1)
+            top = Inches(2 + i)
+            width = Inches(8.5)
+            height = Inches(1)
+            textbox = slide.shapes.add_textbox(left, top, width, height)
+            text_frame = textbox.text_frame
+            p = text_frame.add_paragraph()
+            p.text = text
+            p.font.size = Pt(14)
+
+        # Добавление изображений (если есть)
+        if 'image' in slide_data and slide_data['image'] is not None:
+            image_path = slide_data['image']
+
+            # Преобразуем загруженное изображение в байтовый поток
+            image_bytes = BytesIO(image_path.read())  # Преобразуем в BytesIO
+
+            # Добавляем изображение в слайд
+            slide.shapes.add_picture(image_bytes, Inches(1), Inches(3.5), width=Inches(4), height=Inches(3))
+
+    # Сохраняем презентацию в буфер
+    pptx_file = BytesIO()
+    prs.save(pptx_file)
+    pptx_file.seek(0)
+    return pptx_file
 
 
-# Интерфейс Streamlit
-st.title("Генерация презентации для проведения обучения")
-input_text = st.text_area("Введите ваш текст:")
-generate_button = st.button("Создать презентацию")
+# Основной интерфейс Streamlit
+st.title("Генератор Презентаций")
 
-if generate_button:
+# Слайд 1: Заголовок презентации
+st.subheader("Создайте свою презентацию")
+presentation_title = st.text_input("Название презентации", "Моя Презентация")
+presentation_subtitle = st.text_input("Подзаголовок", "Описание презентации")
+
+slides_data = []
+
+# Слайд 2: Добавление слайдов
+slide_count = st.number_input("Количество слайдов", min_value=1, max_value=10, step=1)
+
+for slide_num in range(slide_count):
+    st.subheader(f"Слайд #{slide_num + 1}")
+    slide_title = st.text_input(f"Заголовок для слайда #{slide_num + 1}", key=f"slide_title_{slide_num}")
+    slide_subtitle = st.text_input(f"Подзаголовок для слайда #{slide_num + 1}", key=f"slide_subtitle_{slide_num}")
+
+    slide_text = []
+    num_texts = st.number_input(f"Количество текстовых блоков для слайда #{slide_num + 1}", min_value=0, max_value=5,
+                                step=1)
+    for i in range(num_texts):
+        text_block = st.text_input(f"Текст {i + 1} для слайда #{slide_num + 1}", key=f"slide_text_{slide_num}_{i}")
+        if text_block:
+            slide_text.append(text_block)
+
+    # Выбор изображения (не обязательно)
+    slide_image = st.file_uploader(f"Загрузите изображение для слайда #{slide_num + 1}", type=["jpg", "png"],
+                                   key=f"slide_image_{slide_num}")
+
+    slides_data.append({
+        'title': slide_title,
+        'subtitle': slide_subtitle,
+        'text': slide_text,
+        'image': slide_image if slide_image else None
+    })
+
+# Кнопка для генерации презентации
+if st.button("Сгенерировать презентацию"):
+    if not slides_data:
+        st.warning("Не добавлены слайды для презентации.")
+    else:
+        pptx_file = create_presentation(slides_data)
+
+        # Загружаем файл для скачивания
+        st.download_button(
+            label="Скачать презентацию",
+            data=pptx_file,
+            file_name=f"{presentation_title}.pptx",
+            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        )
+
+
+# Новости ПОД/ФТ
+'''news_page = st.sidebar.button("🌐 Новости ПОД/ФТ")
+print(news_page)
+if news_page == True:
+    st.session_state.page = "news_page"
+    st.write("Здесь вы можете создать презентацию для проведения обучения сотрудников")
+    st.title("Новости")
+
+# Пример статичных новостей
+news = [
+    {
+        "title": "Новость 1: Обновление функционала",
+        "content": "Мы выпустили обновление, которое добавляет новые возможности для пользователей. Теперь вы можете генерировать отчёты в новом формате.",
+        "date": "2025-04-25",
+    },
+    {
+        "title": "Новость 2: Исправления ошибок",
+        "content": "В следующем обновлении мы исправим несколько критических багов, которые могли мешать работе приложения.",
+        "date": "2025-04-20",
+    },
+    {
+        "title": "Новость 3: Запуск нового сервиса",
+        "content": "Мы рады анонсировать запуск нового сервиса для автоматизации работы с данными. Узнайте все подробности в нашем блоге.",
+        "date": "2025-04-15",
+    },
+]
+
+# Преобразуем строковую дату в объект datetime для сортировки
+for item in news:
+    item["date"] = datetime.strptime(item["date"], "%Y-%m-%d")
+
+# Сортировка новостей по дате
+news.sort(key=lambda x: x["date"], reverse=True)
+
+# Отображение новостей
+for news_item in news:
+    st.subheader(news_item["title"])
+    st.write(f"**Дата:** {news_item['date'].strftime('%Y-%m-%d')}")
+    st.write(news_item["content"])
+    st.markdown("---")
+'''
+
+
+
+
+
+
+# Подключение к OpenAI API
+
+openai.api_key = os.getenv("OPENAI_API_KEY", "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")  # <-- Замени только локально
+
+def generate_news():
     try:
-        # Создаем презентацию
-        presentation = create_presentation(input_text)
-
-        # Преобразовываем презентацию в байтовый поток для скачивания
-        output_buffer = BytesIO()
-        presentation.save(output_buffer)
-        output_buffer.seek(0)
-
-        # Предлагает пользователю скачать созданный файл
-        st.success("Презентация создана!")
-        st.download_button(label="Скачать презентацию",
-                           data=output_buffer.getvalue(),
-                           file_name="mypresentation.pptx",
-                           mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Или "gpt-3.5-turbo"
+            messages=[
+                {"role": "system", "content": "Ты — AI, генерирующий новости по теме ПОД/ФТ (Противодействие отмыванию денег и финансированию терроризма)."},
+                {"role": "user", "content": "Сгенерируй новость о последних событиях в сфере технологий и безопасности, связанных с ПОД/ФТ."}
+            ],
+            max_tokens=300,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        st.error(f"Произошла ошибка: {e}")'''
+        return f"Ошибка при генерации новости: {e}"
+
+# Пример вызова
+if __name__ == "__main__":
+    news = generate_news()
+    print("Сгенерированная новость:\n", news)
+
+
+
+
+
+# Страница новостей
+news_page = st.sidebar.button("📢 Новости ПОД/ФТ")
+print(news_page)
+if news_page:
+    st.session_state.page = "news_page"
+    st.write("Здесь вы можете создать презентацию для проведения обучения сотрудников")
+    st.title("Новости")
+
+    # Пример статичных новостей
+    news = [
+        {
+            "title": "Новость 1: Обновление функционала",
+            "content": "Мы выпустили обновление, которое добавляет новые возможности для пользователей. Теперь вы можете генерировать отчёты в новом формате.",
+            "date": "2025-04-25",
+        },
+        {
+            "title": "Новость 2: Исправления ошибок",
+            "content": "В следующем обновлении мы исправим несколько критических багов, которые могли мешать работе приложения.",
+            "date": "2025-04-20",
+        },
+        {
+            "title": "Новость 3: Запуск нового сервиса",
+            "content": "Мы рады анонсировать запуск нового сервиса для автоматизации работы с данными. Узнайте все подробности в нашем блоге.",
+            "date": "2025-04-15",
+        },
+    ]
+
+    # Добавление новостей, сгенерированных ИИ
+    generated_news = generate_news()
+    news.append({
+        "title": "Искусственный интеллект: Новость от OpenAI",
+        "content": generated_news,
+        "date": datetime.now().strftime("%Y-%m-%d"),
+    })
+
+    # Преобразуем строковую дату в объект datetime для сортировки
+    for item in news:
+        item["date"] = datetime.strptime(item["date"], "%Y-%m-%d")
+
+    # Сортировка новостей по дате
+    news.sort(key=lambda x: x["date"], reverse=True)
+
+    # Отображение новостей
+    for news_item in news:
+        st.subheader(news_item["title"])
+        st.write(f"**Дата:** {news_item['date'].strftime('%Y-%m-%d')}")
+        st.write(news_item["content"])
+        st.markdown("---") 
+
+
+
+
+# --- Добавим отступ перед футером ---
+st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
+st.markdown("---")
+st.image(logo, width=100)
+st.caption("© 2025 ПВК-Конструктор")
 
 
 
