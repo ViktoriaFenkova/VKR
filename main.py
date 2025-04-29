@@ -230,104 +230,90 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
 
 
 # Содержимое страницы с разделом Обучение по ПОД/ФТ
+
+# Кнопка для перехода на страницу "Обучение по ПОД/ФТ"
 presentation_page = st.sidebar.button("📚 Обучение по ПОД/ФТ")
-if presentation_page == True:
+
+# Отображение функционала только если пользователь нажал кнопку
+if presentation_page or st.session_state.get("page") == "presentation_page":
     st.session_state.page = "presentation_page"
+
+    st.title("📚 Обучение по ПОД/ФТ")
     st.write("Здесь вы можете создать презентацию для проведения обучения сотрудников")
 
-# Функция для создания презентации
-def create_presentation(slides_data):
-    prs = Presentation()
+    # Функция генерации презентации
+    def create_presentation(slides_data):
+        prs = Presentation()
+        for slide_data in slides_data:
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            title = slide.shapes.title
+            subtitle = slide.placeholders[1]
+            title.text = slide_data['title']
+            subtitle.text = slide_data['subtitle']
 
-    for slide_data in slides_data:
-        slide = prs.slides.add_slide(prs.slide_layouts[1])  # 1 - титульный слайд (заголовок + подзаголовок)
+            for i, text in enumerate(slide_data.get('text', [])):
+                left = Inches(1)
+                top = Inches(2 + i)
+                width = Inches(8.5)
+                height = Inches(1)
+                textbox = slide.shapes.add_textbox(left, top, width, height)
+                text_frame = textbox.text_frame
+                p = text_frame.add_paragraph()
+                p.text = text
+                p.font.size = Pt(14)
 
-        title = slide.shapes.title
-        subtitle = slide.placeholders[1]
+            if 'image' in slide_data and slide_data['image'] is not None:
+                image_path = slide_data['image']
+                image_bytes = BytesIO(image_path.read())
+                slide.shapes.add_picture(image_bytes, Inches(1), Inches(3.5), width=Inches(4), height=Inches(3))
 
-        title.text = slide_data['title']
-        subtitle.text = slide_data['subtitle']
+        pptx_file = BytesIO()
+        prs.save(pptx_file)
+        pptx_file.seek(0)
+        return pptx_file
 
-        # Добавление текста на слайд
-        for i, text in enumerate(slide_data.get('text', [])):
-            left = Inches(1)
-            top = Inches(2 + i)
-            width = Inches(8.5)
-            height = Inches(1)
-            textbox = slide.shapes.add_textbox(left, top, width, height)
-            text_frame = textbox.text_frame
-            p = text_frame.add_paragraph()
-            p.text = text
-            p.font.size = Pt(14)
+    # Интерфейс генерации слайдов
+    st.subheader("Создайте свою презентацию")
+    presentation_title = st.text_input("Название презентации", "Моя Презентация")
+    presentation_subtitle = st.text_input("Подзаголовок", "Описание презентации")
+    slides_data = []
+    slide_count = st.number_input("Количество слайдов", min_value=1, max_value=10, step=1)
 
-        # Добавление изображений (если есть)
-        if 'image' in slide_data and slide_data['image'] is not None:
-            image_path = slide_data['image']
+    for slide_num in range(slide_count):
+        st.subheader(f"Слайд #{slide_num + 1}")
+        slide_title = st.text_input(f"Заголовок для слайда #{slide_num + 1}", key=f"slide_title_{slide_num}")
+        slide_subtitle = st.text_input(f"Подзаголовок для слайда #{slide_num + 1}", key=f"slide_subtitle_{slide_num}")
+        slide_text = []
+        num_texts = st.number_input(f"Количество текстовых блоков для слайда #{slide_num + 1}",
+                                    min_value=0, max_value=5, step=1)
+        for i in range(num_texts):
+            text_block = st.text_input(f"Текст {i + 1} для слайда #{slide_num + 1}",
+                                       key=f"slide_text_{slide_num}_{i}")
+            if text_block:
+                slide_text.append(text_block)
 
-            # Преобразуем загруженное изображение в байтовый поток
-            image_bytes = BytesIO(image_path.read())  # Преобразуем в BytesIO
+        slide_image = st.file_uploader(f"Загрузите изображение для слайда #{slide_num + 1}",
+                                       type=["jpg", "png"], key=f"slide_image_{slide_num}")
 
-            # Добавляем изображение в слайд
-            slide.shapes.add_picture(image_bytes, Inches(1), Inches(3.5), width=Inches(4), height=Inches(3))
+        slides_data.append({
+            'title': slide_title,
+            'subtitle': slide_subtitle,
+            'text': slide_text,
+            'image': slide_image if slide_image else None
+        })
 
-    # Сохраняем презентацию в буфер
-    pptx_file = BytesIO()
-    prs.save(pptx_file)
-    pptx_file.seek(0)
-    return pptx_file
+    if st.button("Сгенерировать презентацию"):
+        if not slides_data:
+            st.warning("Не добавлены слайды для презентации.")
+        else:
+            pptx_file = create_presentation(slides_data)
+            st.download_button(
+                label="Скачать презентацию",
+                data=pptx_file,
+                file_name=f"{presentation_title}.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            )
 
-
-# Основной интерфейс Streamlit
-st.title("Генератор Презентаций")
-
-# Слайд 1: Заголовок презентации
-st.subheader("Создайте свою презентацию")
-presentation_title = st.text_input("Название презентации", "Моя Презентация")
-presentation_subtitle = st.text_input("Подзаголовок", "Описание презентации")
-
-slides_data = []
-
-# Слайд 2: Добавление слайдов
-slide_count = st.number_input("Количество слайдов", min_value=1, max_value=10, step=1)
-
-for slide_num in range(slide_count):
-    st.subheader(f"Слайд #{slide_num + 1}")
-    slide_title = st.text_input(f"Заголовок для слайда #{slide_num + 1}", key=f"slide_title_{slide_num}")
-    slide_subtitle = st.text_input(f"Подзаголовок для слайда #{slide_num + 1}", key=f"slide_subtitle_{slide_num}")
-
-    slide_text = []
-    num_texts = st.number_input(f"Количество текстовых блоков для слайда #{slide_num + 1}", min_value=0, max_value=5,
-                                step=1)
-    for i in range(num_texts):
-        text_block = st.text_input(f"Текст {i + 1} для слайда #{slide_num + 1}", key=f"slide_text_{slide_num}_{i}")
-        if text_block:
-            slide_text.append(text_block)
-
-    # Выбор изображения (не обязательно)
-    slide_image = st.file_uploader(f"Загрузите изображение для слайда #{slide_num + 1}", type=["jpg", "png"],
-                                   key=f"slide_image_{slide_num}")
-
-    slides_data.append({
-        'title': slide_title,
-        'subtitle': slide_subtitle,
-        'text': slide_text,
-        'image': slide_image if slide_image else None
-    })
-
-# Кнопка для генерации презентации
-if st.button("Сгенерировать презентацию"):
-    if not slides_data:
-        st.warning("Не добавлены слайды для презентации.")
-    else:
-        pptx_file = create_presentation(slides_data)
-
-        # Загружаем файл для скачивания
-        st.download_button(
-            label="Скачать презентацию",
-            data=pptx_file,
-            file_name=f"{presentation_title}.pptx",
-            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        )
 
 
 # Новости ПОД/ФТ
