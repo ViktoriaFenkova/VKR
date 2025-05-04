@@ -67,7 +67,7 @@ print(st.session_state.page)
 
 
 # Содержимое страницы с разделом Редактор Шаблонов
-admin_page = st.sidebar.button("📌 Редактор Шаблонов")
+admin_page = st.sidebar.button("📌 Страничка админа")
 print(admin_page)
 if admin_page == True: # можно просто if e (результат нажатия кнопки):
     st.session_state.page = "admin_page" # при каждом нажатии на кнопку перезаписывается
@@ -158,6 +158,7 @@ def extract_parameters_from_docx(docx_file):
     # Загружаем документ
     doc = Document(docx_file)
 
+
     # Список для хранения параметров
     parameters = set()
 
@@ -167,7 +168,7 @@ def extract_parameters_from_docx(docx_file):
         matches = re.findall(r'\{(.*?)\}', para.text)
         parameters.update(matches)  # Добавляем найденные параметры в множество
 
-    return list(parameters)
+    return list(parameters), doc
 
 #st.session_state - хранение переменных в рамках одной сессии
 if st.session_state.page == "page_main":
@@ -255,56 +256,69 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
             # Страница администратора
     elif st.session_state.page == "admin_page":
         st.title("Страница админа")
-        template_name = st.text_input("Название шаблона")
-        template_description = st.text_area("Описание шаблона")
+        действие = st.selectbox("Действия", ["Редактировать шаблоны", "Удалить шаблоны", "Добавить новость"])
+        if действие == "Редактировать шаблоны":
+            template_name = st.text_input("Название шаблона")
+            template_description = st.text_area("Описание шаблона")
 
-        # Загрузка шаблона
-        uploaded_file = st.file_uploader("Загрузите .docx шаблон", type=["docx"])
+            # Загрузка шаблона
+            uploaded_file = st.file_uploader("Загрузите .docx шаблон", type=["docx"])
 
-        # Словарь для хранения описаний параметров
-        parameter_descriptions = {}
-        parameters = []
+            # Словарь для хранения описаний параметров
+            parameter_descriptions = {}
+            parameters = []
 
-        if uploaded_file:
-            # Извлекаем параметры из загруженного шаблона
-            parameters = extract_parameters_from_docx(uploaded_file)
+            if uploaded_file:
+                # Извлекаем параметры из загруженного шаблона
+                parameters, doc = extract_parameters_from_docx(uploaded_file)
 
-            if parameters:
-                st.markdown("### Параметры шаблона")
+                if parameters:
+                    st.markdown("### Параметры шаблона")
 
 
-                # Для каждого параметра запрашиваем описание
-                for param in parameters:
-                    description = st.text_input(f"Описание для параметра: {param}", key=f"param_desc_{param}")
-                    if description:
-                        parameter_descriptions[param] = description
-            else:
-                st.warning("В шаблоне не найдены параметры.")
-        # Кнопка сохранения шаблона
-        сохранение_шаблона = st.button("Сохранить шаблон")
-        if сохранение_шаблона == True:
-            if not template_name:
-                st.warning("Название шаблона не заполнено")
-                st.error("Шаблон не сохранен")
-            elif not template_description:
-                st.warning("Описание не заполнено")
-                st.error("Шаблон не сохранен")
-            elif not uploaded_file:
-                st.warning("Файл не загружен")
-                st.error("Шаблон не сохранен")
-            elif len(parameter_descriptions)== len(parameters):#проверка длинны списка ключей
-                st.warning("Не указано описание для каждого параметра")
-                st.error("Шаблон не сохранен")
-            else:
-                templates[template_name] = {
-                    "description": template_description,
-                    'template': "./Data/Templates/PVK Template.docx",
-                'parameters': parameter_descriptions
-                }
-                with open("./Data/формы_шаблонов.json", "w") as templates_file:
-                    json.dump(templates, templates_file)
-                st.success("Шаблон сохранен")
+                    # Для каждого параметра запрашиваем описание
+                    for param in parameters:
+                        description = st.text_input(f"Описание для параметра: {param}", key=f"param_desc_{param}")
+                        if description:
+                            parameter_descriptions[param] = description
+                else:
+                    st.warning("В шаблоне не найдены параметры.")
+            # Кнопка сохранения шаблона
+            сохранение_шаблона = st.button("Сохранить шаблон")
+            if сохранение_шаблона == True:
+                if not template_name:
+                    st.warning("Название шаблона не заполнено")
+                    st.error("Шаблон не сохранен")
+                elif not template_description:
+                    st.warning("Описание не заполнено")
+                    st.error("Шаблон не сохранен")
+                elif not uploaded_file:
+                    st.warning("Файл не загружен")
+                    st.error("Шаблон не сохранен")
+                elif len(parameter_descriptions)!= len(parameters):#проверка длинны списка ключей
+                    st.warning("Не указано описание для каждого параметра")
+                    st.error("Шаблон не сохранен")
+                else:
+                    template_new_path = f"./Data/Templates/{template_name}.docx"
+                    doc.save(template_new_path)#doc - название переменной, соответсвует открытому файлу, загруженному пользователем
+                    templates[template_name] = {
+                        "description": template_description,
+                        'template': template_new_path,
+                    'parameters': parameter_descriptions
+                    }
+                    with open("./Data/формы_шаблонов.json", "w") as templates_file:
+                        json.dump(templates, templates_file)
+                    st.success("Шаблон сохранен")
 
+        elif действие == "Удалить шаблоны":
+            шаблоны_на_удаление = st.selectbox ("Шаблоны на удаление", [""] + list(templates.keys()))
+            if шаблоны_на_удаление !="":
+                удаление_шаблона = st.button("Удалить")
+                if удаление_шаблона == True:
+                    del templates[шаблоны_на_удаление]
+                    with open("./Data/формы_шаблонов.json", "w") as templates_file:
+                        json.dump(templates, templates_file)
+                    st.success("Шаблон удален")
 
 
 
