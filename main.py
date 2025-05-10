@@ -170,6 +170,9 @@ def extract_parameters_from_docx(docx_file):
 
     return list(parameters), doc
 
+with open("./Data/news.json", "r") as news_file:  # with испозуется чтобы открыть файл прочитать его и закрыть
+    news = json.load(news_file)
+
 #st.session_state - хранение переменных в рамках одной сессии
 if st.session_state.page == "page_main":
     st.subheader("ПВК-Конструктор — всё для работы по ПОД/ФТ в одном месте")
@@ -209,8 +212,10 @@ elif st.session_state.page == "news_page":
     st.title("Новости")
 
     # Пример статичных новостей
-    news = [
-        {
+
+
+
+    d="""{
             "title": "Новость 1: Обновление функционала",
             "content": "Мы выпустили обновление, которое добавляет новые возможности для пользователей. Теперь вы можете генерировать отчёты в новом формате.",
             "date": "2025-04-25",
@@ -225,14 +230,22 @@ elif st.session_state.page == "news_page":
             "content": "Мы рады анонсировать запуск нового сервиса для автоматизации работы с данными. Узнайте все подробности в нашем блоге.",
             "date": "2025-04-15",
         },
-    ]
+        ]"""
+
 
 
     # Сортировка новостей по дате
-    news.sort(key=lambda x: x["date"], reverse=True)
+    news_list = []
+    for заголовок, текст_новости in news.items():
+        news_list.append({
+            'title': заголовок,
+            'content': текст_новости['content'],
+            'date': текст_новости['date']
+        })
+    news_list.sort(key=lambda x: x["date"], reverse=True)
 
     # Отображение новостей
-    for news_item in news:
+    for news_item in news_list:
         st.subheader(news_item["title"])
         st.write(f"**Дата:** {news_item['date']}")
         st.write(news_item["content"])
@@ -256,7 +269,7 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
             # Страница администратора
     elif st.session_state.page == "admin_page":
         st.title("Страница админа")
-        действие = st.selectbox("Действия", ["Редактировать шаблоны", "Удалить шаблоны", "Добавить новость"])
+        действие = st.selectbox("Действия", ["Редактировать шаблоны", "Удалить шаблоны", "Добавить новость", "Удалить новость"])
         if действие == "Редактировать шаблоны":
             template_name = st.text_input("Название шаблона")
             template_description = st.text_area("Описание шаблона")
@@ -320,10 +333,40 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
                         json.dump(templates, templates_file)
                     st.success("Шаблон удален")
 
+        elif действие == "Добавить новость":
+            title = st.text_input(f"Наименование новости:")
+            content = st.text_input(f"Новость")
+            date = st.date_input("Дата новости")
+             # Кнопка сохранения шаблона
+            сохранение_новости = st.button("Сохранить новость")
+            if сохранение_новости == True:
+                if not title:
+                    st.warning("Название новости не заполнено")
+                    st.error("Новость не сохранена")
+                elif not content:
+                    st.warning("Новость не заполнена")
+                    st.error("Новость не сохранена")
+                elif not date:
+                    st.warning("Дата не заполнена")
+                    st.error("Новость не сохранена")
+                else:
+                    news[title] = {
+                        "content": content,
+                        'date': str(date)
+                    }
+                    with open("./Data/news.json", "w") as news_file:
+                        json.dump(news, news_file)
+                    st.success("Новость сохранена")
 
-
-
-
+        elif действие == "Удалить новость":
+            новости_на_удаление = st.selectbox ("Новости на удаление", [""] + list(news.keys()))
+            if новости_на_удаление !="":
+                удаление_новости = st.button("Удалить")
+                if удаление_новости == True:
+                    del news[новости_на_удаление]
+                    with open("./Data/news.json", "w") as templates_file:
+                        json.dump(news, news_file)
+                    st.success("Новость удалена")
 # Содержимое страницы с разделом Обучение по ПОД/ФТ
 
 # Отображение функционала только если пользователь нажал кнопку
