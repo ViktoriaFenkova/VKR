@@ -3,5 +3,4 @@ streamlit~=1.42.0
 python-pptx~=1.0.2
 matplotlib
 seaborn
-openai~=1.76.0
 click~=8.1.8
