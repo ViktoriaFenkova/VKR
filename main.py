@@ -21,7 +21,8 @@ from PIL import Image
 st.set_page_config(
     page_title="ПВК-Конструктор",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    page_icon=Image.open("logo.png")
 )
 
 logo = Image.open("logo.png")# добавляю файл с логотипом
@@ -58,10 +59,21 @@ if user_regime == True:
 print(st.session_state.page)
 
 # Содержимое страницы с разделом Редактор Шаблонов
-admin_page = st.sidebar.button("📌 Страничка админа")
-print(admin_page)
-if admin_page == True:
-    st.session_state.page = "admin_page"
+if "users_db" not in st.session_state:
+    # Два режима: Администратор (admin) и пользователь (user)
+    st.session_state.users_db = {
+        "admin": {"admin": True, "password": "admin"},
+        "user": {"admin": False, "password": "user"}
+    }
+
+    st.session_state.username = None
+    st.session_state.password = None
+
+if st.session_state.username in st.session_state.users_db and (st.session_state.users_db) [st.session_state.username] ["admin"]: # == True
+    admin_page = st.sidebar.button("📌 Страничка админа")
+    print(admin_page)
+    if admin_page == True:
+        st.session_state.page = "admin_page"
 
 # Содержимое страницы с разделом Обучение по ПОД/ФТ
 presentation_page = st.sidebar.button("📚 Обучение по ПОД/ФТ")
@@ -97,19 +109,14 @@ with open("./Data/формы_шаблонов.json", "r") as templates_file: #wi
     templates = json.load(templates_file)
 
 # Режим пользователя по умолчанию
-if "users_db" not in st.session_state:
-    st.session_state.users_db = {1:{"admin" : True, # любой пользователь - админ
-                                               "password": 1}} # Пустой словарь для хранения данных пользователей
 
-    st.session_state.username = 1
-    st.session_state.password = 1
 
 # Функция для регистрации пользователя
 def register_user(username, password):
     if username in st.session_state.users_db:
         st.error("Пользователь с таким именем уже существует.")
     else:
-        st.session_state.users_db[username] = {"admin" : True, # любой пользователь - админ
+        st.session_state.users_db[username] = {"admin" : False, # любой пользователь - админ
                                                "password": password}
         st.success("Регистрация прошла успешно!")
 
@@ -121,7 +128,7 @@ def login_user(username, password):
         st.error("Неверное имя пользователя или пароль.")
 
 if (not (st.session_state.username in st.session_state.users_db and st.session_state.users_db[st.session_state.username] ["password"] == st.session_state.password) and
-    st.session_state.page != "page_main"):
+    st.session_state.page != "page_main" and st.session_state.page != "news_page"):
     st.title("Форма регистрации и входа") # Заголовок формы регистрации и входа
 
     option = st.selectbox("Выберите действие", ["Регистрация", "Вход"])
@@ -151,22 +158,22 @@ def extract_parameters_from_docx(docx_file):
     # Загружаем документ
     doc = Document(docx_file)
 
-
-    # Список для хранения параметров
+    # Создаю список для хранения параметров
     parameters = set()
 
-    # Проходим по всем параграфам в документе
+    # Прохожу по всем параграфам в документе
     for para in doc.paragraphs:
-        # Используем регулярное выражение для поиска параметров в фигурных скобках
+        # Использую регулярное выражение для поиска параметров в фигурных скобках
         matches = re.findall(r'\{(.*?)\}', para.text)
-        parameters.update(matches)  # Добавляем найденные параметры в множество
+        parameters.update(matches)  # Добавляю найденные параметры в множество
 
-    return list(parameters), doc
+    return list(parameters), doc # возврат параметров
 
-with open("./Data/news.json", "r") as news_file:  # with испозуется чтобы открыть файл прочитать его и закрыть
+with open("./Data/news.json", "r") as news_file:
     news = json.load(news_file)
 
 #st.session_state - хранение переменных в рамках одной сессии
+# Наполнение главной страницы
 if st.session_state.page == "page_main":
     st.subheader("ПВК-Конструктор — всё для работы по ПОД/ФТ в одном месте")
     st.markdown(
@@ -194,21 +201,19 @@ if st.session_state.page == "page_main":
         ---
 
         #### 📰 **Новости ПОД/ФТ**
-        Следите за последними изменениями в сфере ПОД/ФТ и финансового мониторинга.  
-        Актуальные новости и аналитика автоматически подгружаются с использованием ИИ.
+        Следите за последними изменениями в сфере ПОД/ФТ для своевременного внедрения обновлений в процессы и обучения сотрудников организации.
 
         ---
         """)
 
+
+# Наполнение страницы с новостями
 elif st.session_state.page == "news_page":
     st.write("Актуальные новости в сфере ПОД/ФТ и финансового мониторинга")
     st.title("Новости")
 
     # Пример статичных новостей
-
-
-
-    d="""{
+    новости ="""{
             "title": "Новость 1: Обновление функционала",
             "content": "Мы выпустили обновление, которое добавляет новые возможности для пользователей. Теперь вы можете генерировать отчёты в новом формате.",
             "date": "2025-04-25",
@@ -224,8 +229,6 @@ elif st.session_state.page == "news_page":
             "date": "2025-04-15",
         },
         ]"""
-
-
 
     # Сортировка новостей по дате
     news_list = []
@@ -244,9 +247,10 @@ elif st.session_state.page == "news_page":
         st.write(news_item["content"])
         st.markdown("---")
 
+# Работа с шаблонами
 if st.session_state.username in st.session_state.users_db and st.session_state.users_db[st.session_state.username]["password"] == st.session_state.password:
     if st.session_state.page== "page_PVK":
-        template_name = выбор_шаблона_streamlit(templates) #вызов функции с параметрами tempiates  и после этого функция возращает результат и он записывается в перемменную template_name
+        template_name = выбор_шаблона_streamlit(templates) # вызов функции с параметрами tempiates, и после этого функция возвращает результат и он записывается в переменную template_name
 
         template_dict = templates[template_name] # template -это словарь, ключи в этом словаре - наименования шаблонов, template_name-наименование конкретного шаблона, выбранного пользователем
         template_path = template_dict['template'] # в template_path записывается 'template': './Data/Templates/ПВК для ИП.docx',
@@ -254,7 +258,7 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
     # template = template_file.read()
 
         заполненный_шаблон = заполнение_шаблона_streamlit(template_dict, template_path)
-        print(заполненный_шаблон) #самопроверка (но можно сделать через чекпоинт - черз дебак режим)
+        print(заполненный_шаблон) # самопроверка (но можно сделать через чекпоинт - черз дебак режим)
         with open("шаблон_клиента.docx", "w") as шаблон_файл:
             шаблон_файл.write(заполненный_шаблон)# retern - только с не готовыми функциями
         with open("шаблон_клиента.docx", "r") as шаблон_файл:
@@ -262,8 +266,8 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
             # Страница администратора
     elif st.session_state.page == "admin_page":
         st.title("Страница админа")
-        действие = st.selectbox("Действия", ["Редактировать шаблоны", "Удалить шаблоны", "Добавить новость", "Удалить новость"])
-        if действие == "Редактировать шаблоны":
+        действие = st.selectbox("Действия", ["Добавить шаблон", "Удалить шаблоны", "Добавить новость", "Удалить новость"])
+        if действие == "Добавить шаблон":
             template_name = st.text_input("Название шаблона")
             template_description = st.text_area("Описание шаблона")
 
@@ -275,14 +279,14 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
             parameters = []
 
             if uploaded_file:
-                # Извлекаем параметры из загруженного шаблона
+                # Извлекаю параметры из загруженного шаблона
                 parameters, doc = extract_parameters_from_docx(uploaded_file)
 
                 if parameters:
                     st.markdown("### Параметры шаблона")
 
 
-                    # Для каждого параметра запрашиваем описание
+                    # Для каждого параметра запрашиваю описание
                     for param in parameters:
                         description = st.text_input(f"Описание для параметра: {param}", key=f"param_desc_{param}")
                         if description:
@@ -306,7 +310,7 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
                     st.error("Шаблон не сохранен")
                 else:
                     template_new_path = f"./Data/Templates/{template_name}.docx"
-                    doc.save(template_new_path)#doc - название переменной, соответсвует открытому файлу, загруженному пользователем
+                    doc.save(template_new_path)#doc - название переменной, соответствует открытому файлу, загруженному пользователем
                     templates[template_name] = {
                         "description": template_description,
                         'template': template_new_path,
@@ -448,7 +452,7 @@ if st.session_state.username in st.session_state.users_db and st.session_state.u
 
 
 
-# --- Добавим отступ перед футером ---
+
 st.markdown("<div style='height:200px;'></div>", unsafe_allow_html=True)
 st.markdown("---")
 st.image(logo, width=100)
